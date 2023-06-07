@@ -1,126 +1,109 @@
 const pool = require('../data/config');
-const jwt = require('jsonwebtoken');
 
-const secretKey = 'mi_clave_secreta';
+const routes = (app, jwt, secretKey) => {
+  const verifyToken = (req, res, next) => {
+    const token = req.headers.authorization;
 
-const verifyToken = (req, res, next) => {
-  const token = req.headers['authorization'];
-
-  if (!token) {
-    return res.status(401).json({ error: 'Token no proporcionado' });
-  }
-
-  jwt.verify(token, secretKey, (err, decoded) => {
-    if (err) {
-      return res.status(403).json({ error: 'Token inválido' });
+    if (!token) {
+      return res.status(401).json({ message: 'No se proporcionó un token' });
     }
 
-    // Si el token es válido, puedes acceder a los datos decodificados en decoded
-    req.user = decoded;
-    next();
-  });
-};
+    jwt.verify(token, secretKey, (err, decoded) => {
+      if (err) {
+        return res.status(403).json({ message: 'Token inválido' });
+      }
 
-const router = app => {
-  // Mostrar mensaje de bienvenida en la raíz
-  app.get('/', (request, response) => {
-    response.send({ message: 'Bienvenido a Juan Carlos Guerrero con Node.js Express REST API!' });
+      req.user = decoded;
+      next();
+    });
+  };
+
+  // Rutas públicas
+  app.post('/login', (req, res) => {
+    // Realiza la autenticación del usuario y genera el token JWT
+    const user = { id: 1, username: 'usuario' }; // Datos del usuario autenticado
+    const token = jwt.sign(user, secretKey);
+    res.json({ token });
   });
 
-  // Rutas de usuarios
-  app.get('/users', verifyToken, (request, response) => {
+  // Rutas protegidas
+  app.get('/users', verifyToken, (req, res) => {
     pool.query('SELECT * FROM users', (error, result) => {
       if (error) throw error;
-
-      response.send(result);
+      res.send(result);
     });
   });
 
-  app.get('/users/:id', verifyToken, (request, response) => {
-    const id = request.params.id;
-
+  app.get('/users/:id', verifyToken, (req, res) => {
+    const id = req.params.id;
     pool.query('SELECT * FROM users WHERE id = ?', id, (error, result) => {
       if (error) throw error;
-
-      response.send(result);
+      res.send(result);
     });
   });
 
-  app.post('/users', verifyToken, (request, response) => {
-    pool.query('INSERT INTO users SET ?', request.body, (error, result) => {
+  app.post('/users', verifyToken, (req, res) => {
+    pool.query('INSERT INTO users SET ?', req.body, (error, result) => {
       if (error) throw error;
-
-      response.status(201).send(`User added with ID ${result.insertedId}`);
+      res.status(201).send(`User added with ID ${result.insertId}`);
     });
   });
 
-  app.put('/users/:id', verifyToken, (request, response) => {
-    const id = request.params.id;
-
-    pool.query('UPDATE users SET ? WHERE id = ?', [request.body, id], (error, result) => {
+  app.put('/users/:id', verifyToken, (req, res) => {
+    const id = req.params.id;
+    pool.query('UPDATE users SET ? WHERE id = ?', [req.body, id], (error, result) => {
       if (error) throw error;
-
-      response.send('User updated successfully.');
+      res.send('User updated successfully');
     });
   });
 
-  app.delete('/users/:id', verifyToken, (request, response) => {
-    const id = request.params.id;
-
+  app.delete('/users/:id', verifyToken, (req, res) => {
+    const id = req.params.id;
     pool.query('DELETE FROM users WHERE id = ?', id, (error, result) => {
       if (error) throw error;
-
-      response.send('User deleted.');
+      res.send('User deleted');
     });
   });
 
-  // Rutas de productos
-  app.get('/productos', verifyToken, (request, response) => {
+  // Rutas de productos (similar a las rutas de usuarios)
+
+  app.get('/productos', verifyToken, (req, res) => {
     pool.query('SELECT * FROM productos', (error, result) => {
       if (error) throw error;
-
-      response.send(result);
+      res.send(result);
     });
   });
 
-  app.get('/productos/:id', verifyToken, (request, response) => {
-    const id = request.params.id;
-
+  app.get('/productos/:id', verifyToken, (req, res) => {
+    const id = req.params.id;
     pool.query('SELECT * FROM productos WHERE id = ?', id, (error, result) => {
       if (error) throw error;
-
-      response.send(result);
+      res.send(result);
     });
   });
 
-  app.post('/productos', verifyToken, (request, response) => {
-    pool.query('INSERT INTO productos SET ?', request.body, (error, result) => {
+  app.post('/productos', verifyToken, (req, res) => {
+    pool.query('INSERT INTO productos SET ?', req.body, (error, result) => {
       if (error) throw error;
-
-      response.status(201).send(`Producto added with ID ${result.insertedId}`);
+      res.status(201).send(`Producto added with ID ${result.insertId}`);
     });
   });
 
-  app.put('/productos/:id', verifyToken, (request, response) => {
-    const id = request.params.id;
-
-    pool.query('UPDATE productos SET ? WHERE id = ?', [request.body, id], (error, result) => {
+  app.put('/productos/:id', verifyToken, (req, res) => {
+    const id = req.params.id;
+    pool.query('UPDATE productos SET ? WHERE id = ?', [req.body, id], (error, result) => {
       if (error) throw error;
-
-      response.send('Product updated successfully.');
+      res.send('Product updated successfully');
     });
   });
 
-  app.delete('/productos/:id', verifyToken, (request, response) => {
-    const id = request.params.id;
-
+  app.delete('/productos/:id', verifyToken, (req, res) => {
+    const id = req.params.id;
     pool.query('DELETE FROM productos WHERE id = ?', id, (error, result) => {
       if (error) throw error;
-
-      response.send('Product deleted.');
+      res.send('Product deleted');
     });
   });
-
 };
 
-module.exports = router;
+module.exports = routes;
